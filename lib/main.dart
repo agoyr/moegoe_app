@@ -1,8 +1,35 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:audio_session/audio_session.dart';
+
+import 'dart:developer';
 
 void main() {
   runApp(const MyApp());
 }
+
+class MyCustomSource extends StreamAudioSource {
+  final List<int> bytes;
+  MyCustomSource(this.bytes) : super(null);
+  
+  @override
+  Future<StreamAudioResponse> request([int? start, int? end]) async {
+    start ??= 0;
+    end ??= bytes.length;
+    return StreamAudioResponse(
+      sourceLength: bytes.length,
+      contentLength: end - start,
+      offset: start,
+      stream: Stream.value(bytes.sublist(start, end)),
+      contentType: 'audio/mpeg',
+    );
+  }
+}
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -13,103 +40,116 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.teal,
+        //primaryTextTheme: TextTheme(),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const SendingForm(title: 'MoeGoe App'),
     );
   }
 }
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+class SendingForm extends StatefulWidget {
+  const SendingForm({super.key, required this.title});
 
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<SendingForm> createState() => _SendingPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _SendingPageState extends State<SendingForm> {
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  Future<void> _handleHttp() async {
+    
+    //try{
+      // Directory appDocDir = await getApplicationDocumentsDirectory();
+      // String appDocPath = appDocDir.path;
+      // String imgPath = appDocPath + '/audio.wav';
+      var url = Uri.http('localhost:8080', 'tts', {'text': ttsText});
+      //print(url);
+      var response = await http.get(url);
+      //print(response.bodyBytes.runtimeType);
+      setState(() {
+         _players.add(AudioPlayer());
+      });
+     
+      await _players.last.setAudioSource(MyCustomSource(response.bodyBytes));
+      await _players.last.play();
+      // final file = File(imgPath);
+      // await file.create();
+      // await file.writeAsBytes(response.bodyBytes);
+
+   //
+
+    
+    // if (response.statusCode == 200) {
+    //   var jsonResponse = convert.jsonDecode(response.body) as Map<String, dynamic>;
+    //   var itemCount = jsonResponse['totalItems'];
+    //   print('Number of books about http: $itemCount.');
+    // } else {
+    //   print('Request failed with status: ${response.statusCode}.');
+    // }
   }
+
+
+  final myController = TextEditingController();
+  String ttsText='';
+  //late AudioPlayer _player = AudioPlayer();
+  List<AudioPlayer> _players = [];
+
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+            LimitedBox(
+              maxHeight: 300,
+               child: ListView.builder(
+                itemCount: _players.length,
+                itemBuilder: (BuildContext context, int index){
+                  return ListTile(
+                    title: Text('$index')
+                  );
+                } 
+
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            const Text(
+              'Please enter the text that you wanna make speech',
+            ),
+            TextField(
+              decoration: const InputDecoration(
+                hintText: 'Hello everyone!'
+              ),
+              controller: myController,
+            ),
+            ElevatedButton(
+              onPressed: (){
+                ttsText = myController.text;
+                //print(ttsText);
+                _handleHttp();
+              }, 
+              child: const Text(
+                'Generate!',
+                //style: ,
+              )
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
+
+// Future<void> _handleHttp() async {
+//     var url = Uri.http('localhost:8080', '/tts', {'text': 'gori'});
+    
+//     print(url);
+
+//     var response = await http.get(url);
+//   }
