@@ -12,6 +12,23 @@ void main() {
   runApp(const MyApp());
 }
 
+class MyCustomSource extends StreamAudioSource {
+  final List<int> bytes;
+  MyCustomSource(this.bytes) : super(null);
+  
+  @override
+  Future<StreamAudioResponse> request([int? start, int? end]) async {
+    start ??= 0;
+    end ??= bytes.length;
+    return StreamAudioResponse(
+      sourceLength: bytes.length,
+      contentLength: end - start,
+      offset: start,
+      stream: Stream.value(bytes.sublist(start, end)),
+      contentType: 'audio/mpeg',
+    );
+  }
+}
 
 
 class MyApp extends StatelessWidget {
@@ -42,18 +59,21 @@ class SendingForm extends StatefulWidget {
 class _SendingPageState extends State<SendingForm> {
 
   Future<void> _handleHttp() async {
-    //var url = Uri.parse('http://localhost:8080/tts?text=''おはよう');
     
     //try{
       // Directory appDocDir = await getApplicationDocumentsDirectory();
       // String appDocPath = appDocDir.path;
       // String imgPath = appDocPath + '/audio.wav';
       var url = Uri.http('localhost:8080', 'tts', {'text': ttsText});
-      print(url);
+      //print(url);
       var response = await http.get(url);
-      print(response.bodyBytes.runtimeType);
-      await _player.setUrl('http://localhost:8080/audio');
-      await _player.play();
+      //print(response.bodyBytes.runtimeType);
+      setState(() {
+         _players.add(AudioPlayer());
+      });
+     
+      await _players.last.setAudioSource(MyCustomSource(response.bodyBytes));
+      await _players.last.play();
       // final file = File(imgPath);
       // await file.create();
       // await file.writeAsBytes(response.bodyBytes);
@@ -73,7 +93,9 @@ class _SendingPageState extends State<SendingForm> {
 
   final myController = TextEditingController();
   String ttsText='';
-  late AudioPlayer _player = AudioPlayer();
+  //late AudioPlayer _player = AudioPlayer();
+  List<AudioPlayer> _players = [];
+
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +107,18 @@ class _SendingPageState extends State<SendingForm> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            LimitedBox(
+              maxHeight: 300,
+               child: ListView.builder(
+                itemCount: _players.length,
+                itemBuilder: (BuildContext context, int index){
+                  return ListTile(
+                    title: Text('$index')
+                  );
+                } 
+
+              ),
+            ),
             const Text(
               'Please enter the text that you wanna make speech',
             ),
