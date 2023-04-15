@@ -1,155 +1,135 @@
+//import 'dart:html';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:moegoe_app/makeTTS.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:developer';
+import 'makeTTS.dart';
+import 'audiostate.dart';
+import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
+
 
 void main() {
-  runApp(const MyApp());
-}
-
-class MyCustomSource extends StreamAudioSource {
-  final List<int> bytes;
-  MyCustomSource(this.bytes) : super(null);
-  
-  @override
-  Future<StreamAudioResponse> request([int? start, int? end]) async {
-    start ??= 0;
-    end ??= bytes.length;
-    return StreamAudioResponse(
-      sourceLength: bytes.length,
-      contentLength: end - start,
-      offset: start,
-      stream: Stream.value(bytes.sublist(start, end)),
-      contentType: 'audio/mpeg',
-    );
-  }
+  runApp(ProviderScope(child:const MyApp()));
 }
 
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  // This widget is the root of your application.
+  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.teal,
-        //primaryTextTheme: TextTheme(),
       ),
-      home: const SendingForm(title: 'MoeGoe App'),
+      home: AudiosForm(),
     );
   }
 }
-class SendingForm extends StatefulWidget {
-  const SendingForm({super.key, required this.title});
-
-  final String title;
+class AudiosForm extends ConsumerWidget {
 
   @override
-  State<SendingForm> createState() => _SendingPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
 
-class _SendingPageState extends State<SendingForm> {
-
-  Future<void> _handleHttp() async {
-    
-    //try{
-      // Directory appDocDir = await getApplicationDocumentsDirectory();
-      // String appDocPath = appDocDir.path;
-      // String imgPath = appDocPath + '/audio.wav';
-      var url = Uri.http('localhost:8080', 'tts', {'text': ttsText});
-      //print(url);
-      var response = await http.get(url);
-      //print(response.bodyBytes.runtimeType);
-      setState(() {
-         _players.add(AudioPlayer());
-      });
-     
-      await _players.last.setAudioSource(MyCustomSource(response.bodyBytes));
-      await _players.last.play();
-      // final file = File(imgPath);
-      // await file.create();
-      // await file.writeAsBytes(response.bodyBytes);
-
-   //
-
-    
-    // if (response.statusCode == 200) {
-    //   var jsonResponse = convert.jsonDecode(response.body) as Map<String, dynamic>;
-    //   var itemCount = jsonResponse['totalItems'];
-    //   print('Number of books about http: $itemCount.');
-    // } else {
-    //   print('Request failed with status: ${response.statusCode}.');
-    // }
-  }
-
-
-  final myController = TextEditingController();
-  String ttsText='';
-  //late AudioPlayer _player = AudioPlayer();
-  List<AudioPlayer> _players = [];
-
-
-  @override
-  Widget build(BuildContext context) {
+    final data =ref.watch(AudiosProvider);
+    //print(audios.length);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: const Text('TTS App'),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            LimitedBox(
-              maxHeight: 300,
-               child: ListView.builder(
-                itemCount: _players.length,
-                itemBuilder: (BuildContext context, int index){
-                  return ListTile(
-                    title: Text('$index')
-                  );
-                } 
+        child: ListView.builder(
+          itemCount: ref.read(AudiosProvider).length,
+          itemBuilder: (BuildContext context, int index){
+            return AudioWidget(index: index);
+          } 
 
-              ),
-            ),
-            const Text(
-              'Please enter the text that you wanna make speech',
-            ),
-            TextField(
-              decoration: const InputDecoration(
-                hintText: 'Hello everyone!'
-              ),
-              controller: myController,
-            ),
-            ElevatedButton(
-              onPressed: (){
-                ttsText = myController.text;
-                //print(ttsText);
-                _handleHttp();
-              }, 
-              child: const Text(
-                'Generate!',
-                //style: ,
-              )
-            ),
-          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: (){
+          Navigator.push(context, MaterialPageRoute(builder: (context) => TTSForm()));
+        },
       ),
     );
   }
 }
 
-// Future<void> _handleHttp() async {
-//     var url = Uri.http('localhost:8080', '/tts', {'text': 'gori'});
-    
-//     print(url);
+class AudioWidget extends ConsumerWidget{
+  AudioWidget({required this.index});
+  int index;
+  //WidgetRef ref;
+  
+  @override
+  Widget build(BuildContext context, WidgetRef ref){
+    final pos = ref.watch(nowPosisionProvider);
+    final data = ref.watch(AudiosProvider)[index];
+    final audioNotifier = ref.read(AudiosProvider.notifier);
+    return GestureDetector(
+      child:Column(
+        children: [
+          ListTile(
+            title: Text(data.name),
+            subtitle: Text(data.date),
+          ),
+          if(data.active)
+            ProgressBar(
+              progress: ref.read(nowPosisionProvider).when(
+                data: (pos){return pos ?? const Duration(minutes: 0);},
+                error: (error, stack)=> const Duration(minutes: 0),
+                loading: () => const Duration(minutes: 0),
+              ), 
+              buffered: audioNotifier.bufferdPosision(index),
+              total: audioNotifier.duration(index)
+            ),
+          if(data.active)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed:(){
+                    
+                  },
+                  icon: Icon(Icons.replay_10)
+                ),
+                if(!audioNotifier.isPlaying(index))
+                IconButton(
+                  onPressed: (){
+                    ref.read(AudiosProvider.notifier).play(index);
+                  }, 
+                  icon: const Icon(Icons.play_arrow)
+                )
+                else
+                IconButton(
+                  onPressed: (){
+                    ref.read(AudiosProvider.notifier).stop(index);
+                  }, 
+                  icon: const Icon(Icons.pause)
+                )
+                ,
+                IconButton(
+                  onPressed: (){
 
-//     var response = await http.get(url);
-//   }
+                  }, 
+                  icon: Icon(Icons.forward_10)
+                ),
+              ],
+            )
+          //),
+          
+        ]
+      ),
+      onTap: () => ref.read(AudiosProvider.notifier).toggle(index),
+    );
+  }
+}
+
