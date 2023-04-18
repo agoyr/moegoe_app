@@ -1,7 +1,4 @@
-//import 'dart:html';
-
-//import 'dart:wasm';
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -14,21 +11,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:developer';
 import 'package:intl/intl.dart';
 
-final nowPosisionProvider = StreamProvider<Duration?>((ref) async*{
-  ref.watch(AudiosProvider);
-  final activeData = ref.watch(AudiosProvider.notifier).activeaudio;
-  //return activeData != null ? activeData.audio.position : null;
-  print('nowposition');
-  if(activeData != null){
+// final nowPosisionProvider = StreamProvider<Duration?>((ref) async*{
+//   ref.watch(AudiosProvider);
+//   final activeData = ref.watch(AudiosProvider.notifier).activeaudio;
+//   //return activeData != null ? activeData.audio.position : null;
+//   print('nowposition');
+//   if(activeData != null){
   
-    await for (final position in activeData.audio.positionStream){
-      print("nonnull");
-      print(position);
-      yield position;
-  }
-  }
-  //return activeData?.audio.position;
-});
+//     await for (final position in activeData.audio.positionStream){
+//       print("nonnull");
+//       print(position);
+//       yield position;
+//   }
+//   }
+//   //return activeData?.audio.position;
+// });
 
 final AudiosProvider = StateNotifierProvider<AudiosState, List<AudioData>>((ref) => AudiosState());
 
@@ -40,6 +37,8 @@ class AudiosState extends StateNotifier<List<AudioData>> {
 
   AudiosState():super([]);
   int? nowActive;
+  StreamSubscription? _positoinSub;
+  StreamSubscription? _playerStateSub;
 
   void addAudio(AudioData audiodata){
     state = [...state, audiodata];
@@ -48,14 +47,15 @@ class AudiosState extends StateNotifier<List<AudioData>> {
     });
   }
   
-  void play(int id){
+  void play(int id) async {
     //print(state[id].audio.playing);
     // print('before');
     // print(state[id].audio.playerState);
     if(state[id].audio.playerState.processingState == ProcessingState.completed){
-      state[id].audio.seek(Duration(seconds: 0));
+      await state[id].audio.seek(Duration(seconds: 0));
     }
-    print(state[id].audio.playing);
+    print('play');
+    //print(state[id].audio.playing);
     
     state[id].audio.play(); 
     
@@ -63,8 +63,13 @@ class AudiosState extends StateNotifier<List<AudioData>> {
     // print(state[id].audio.playerState);
     state = [...state];
   }
-  void stop(int id){
+  void pause(int id){
     state[id].audio.pause();
+    //print(state[id].audio.playerState);
+    state = [...state];
+  }
+   void stop(int id){
+    state[id].audio.stop();
     //print(state[id].audio.playerState);
     state = [...state];
   }
@@ -85,35 +90,44 @@ class AudiosState extends StateNotifier<List<AudioData>> {
     //state = [...state];
     return state[index].audio.position;
   }
-  Duration duration(int index){
+  Duration? duration(int index){
     //state = [...state];
-    return state[index].audio.duration!;
+    return state[index].audio.duration;
     
   }
-
-  // ProcessingState get nowstate{
-  //   return 
-  // }
-  
-
-  void Activate(int id){
-    for(final audio in state){
-
-    }
+  bool isActive(int index){
+    return state[index].active;
   }
 
-
+  ProcessingState? get processingState => nowActive != null ? state[nowActive!].audio.processingState : null;
 
   void toggle(int id){
     if (nowActive == id){
+      state[id].audio.stop();
       state[id]=state[id].copyWith(active: false);
       nowActive = null;
-      //print('きちら');
+      _positoinSub?.pause();
+      _playerStateSub?.pause();
     }else {
-      if(nowActive != null) state[nowActive!] = state[nowActive!].copyWith(active: false);
+      if(nowActive != null){
+        state[nowActive!].audio.stop();
+        state[nowActive!] = state[nowActive!].copyWith(active: false);
+
+      } 
       state[id]=state[id].copyWith(active: true);
+      _positoinSub = state[id].audio.positionStream.listen((event) {
+        //print(event);
+        state=[...state];
+      });
+      _playerStateSub = state[id].audio.playerStateStream.listen((state) {
+        //print(state);
+        if(state.processingState == ProcessingState.completed){
+          pause(id);
+        }
+       });
+      _positoinSub!.resume();
+      _playerStateSub!.resume();
       nowActive = id;
-      //print('nonkiti');
     }
     state = [...state];
   }
