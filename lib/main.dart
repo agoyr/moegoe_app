@@ -1,5 +1,4 @@
-//import 'dart:html';
-import 'dart:ui';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'dart:convert';
@@ -17,7 +16,7 @@ import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 
 
 void main() {
-  runApp(ProviderScope(child:const MyApp()));
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 
@@ -60,6 +59,9 @@ class AudiosForm extends ConsumerWidget {
           Navigator.push(context, MaterialPageRoute(builder: (context) => TTSForm()));
         },
       ),
+      persistentFooterButtons: [
+        ElevatedButton(onPressed: (){print(ref.read(AudiosProvider.notifier).processingState);}, child:null)
+      ],
     );
   }
 }
@@ -67,69 +69,84 @@ class AudiosForm extends ConsumerWidget {
 class AudioWidget extends ConsumerWidget{
   AudioWidget({required this.index});
   int index;
-  //WidgetRef ref;
-  
   @override
   Widget build(BuildContext context, WidgetRef ref){
-    final pos = ref.watch(nowPosisionProvider);
+    //final pos = ref.watch(nowPosisionProvider);
     final data = ref.watch(AudiosProvider)[index];
     final audioNotifier = ref.read(AudiosProvider.notifier);
-    return GestureDetector(
-      child:Column(
-        children: [
-          ListTile(
-            title: Text(data.name),
-            subtitle: Text(data.date),
-          ),
-          if(data.active)
-            ProgressBar(
-              progress: ref.read(nowPosisionProvider).when(
-                data: (pos){return pos ?? const Duration(minutes: 0);},
-                error: (error, stack)=> const Duration(minutes: 0),
-                loading: () => const Duration(minutes: 0),
-              ), 
-              buffered: audioNotifier.bufferdPosision(index),
-              total: audioNotifier.duration(index)
+    return Container(
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor))),
+      child: GestureDetector(
+        child:Column(
+          children: [
+            ListTile(
+              title: Text(data.name),
+              subtitle: Text(data.date),
             ),
-          if(data.active)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed:(){
-                    
-                  },
-                  icon: Icon(Icons.replay_10)
-                ),
-                if(!audioNotifier.isPlaying(index))
-                IconButton(
-                  onPressed: (){
-                    ref.read(AudiosProvider.notifier).play(index);
-                  }, 
-                  icon: const Icon(Icons.play_arrow)
-                )
-                else
-                IconButton(
-                  onPressed: (){
-                    ref.read(AudiosProvider.notifier).stop(index);
-                  }, 
-                  icon: const Icon(Icons.pause)
-                )
-                ,
-                IconButton(
-                  onPressed: (){
-
-                  }, 
-                  icon: Icon(Icons.forward_10)
-                ),
-              ],
-            )
-          //),
-          
-        ]
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              //height: audioNotifier.isActive(index) ? 300.0: 0.0,
+              opacity: audioNotifier.isActive(index) ? 1.0 : 0.0,
+              child: AnimatedContainer(
+                height: audioNotifier.isActive(index) ? 60 : 0.0,
+                //opacity: audioNotifier.isActive(index) ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: Flexible(child: onActivePart(ref, index))//audioNotifier.isActive(index) ? onActivePart(ref, index) : const SizedBox.shrink(),
+            ),)
+          ]
+        ),
+        onTap: () => ref.read(AudiosProvider.notifier).toggle(index),
       ),
-      onTap: () => ref.read(AudiosProvider.notifier).toggle(index),
     );
   }
 }
 
+Widget onActivePart(WidgetRef ref,int index){
+  final audioNotifier = ref.watch(AudiosProvider.notifier);
+  return Column(
+  children: [
+    Flexible(
+    child:Padding(
+      padding: const EdgeInsets.only(left: 20.0,right: 20.0),
+      child: Flexible(child:ProgressBar(
+        progress: audioNotifier.position(index),
+        buffered: audioNotifier.bufferdPosision(index),
+        total: audioNotifier.duration(index) ?? const Duration(seconds: 0)
+      ),)
+    )
+    ),
+    Flexible(child: 
+    Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed:(){
+            
+          },
+          icon: const Flexible(child: Icon(Icons.replay_10))
+        ),
+        if(!audioNotifier.isPlaying(index))
+        IconButton(
+          onPressed: (){
+            ref.read(AudiosProvider.notifier).play(index);
+          }, 
+          icon: const Icon(Icons.play_arrow)
+        )
+        else
+        IconButton(
+          onPressed: (){
+            ref.read(AudiosProvider.notifier).pause(index);
+          }, 
+          icon: const Flexible(child: Icon(Icons.pause)) 
+        )
+        ,
+        IconButton(
+          onPressed: (){
+
+          }, 
+          icon: const Flexible(child:Icon(Icons.forward_10))
+        ),
+      ],
+    )),
+  ],
+);}
