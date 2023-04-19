@@ -11,34 +11,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:developer';
 import 'package:intl/intl.dart';
 
-// final nowPosisionProvider = StreamProvider<Duration?>((ref) async*{
-//   ref.watch(AudiosProvider);
-//   final activeData = ref.watch(AudiosProvider.notifier).activeaudio;
-//   //return activeData != null ? activeData.audio.position : null;
-//   print('nowposition');
-//   if(activeData != null){
-  
-//     await for (final position in activeData.audio.positionStream){
-//       print("nonnull");
-//       print(position);
-//       yield position;
-//   }
-//   }
-//   //return activeData?.audio.position;
-// });
-
 final AudiosProvider = StateNotifierProvider<AudiosState, List<AudioData>>((ref) => AudiosState());
 
-enum AudioPlayState {
-  puase,
-  playing,
-}
 class AudiosState extends StateNotifier<List<AudioData>> {
 
   AudiosState():super([]);
   int? nowActive;
   StreamSubscription? _positoinSub;
   StreamSubscription? _playerStateSub;
+
+  ProcessingState? get processingState => nowActive != null ? state[nowActive!].audio.processingState : null;
 
   void addAudio(AudioData audiodata){
     state = [...state, audiodata];
@@ -48,29 +30,20 @@ class AudiosState extends StateNotifier<List<AudioData>> {
   }
   
   void play(int id) async {
-    //print(state[id].audio.playing);
-    // print('before');
-    // print(state[id].audio.playerState);
     if(state[id].audio.playerState.processingState == ProcessingState.completed){
       await state[id].audio.seek(Duration(seconds: 0));
     }
-    print('play');
-    //print(state[id].audio.playing);
-    
+    print('play');    
     state[id].audio.play(); 
-    
-    // print('after');
-    // print(state[id].audio.playerState);
     state = [...state];
   }
+
   void pause(int id){
     state[id].audio.pause();
-    //print(state[id].audio.playerState);
     state = [...state];
   }
    void stop(int id){
     state[id].audio.stop();
-    //print(state[id].audio.playerState);
     state = [...state];
   }
 
@@ -98,8 +71,6 @@ class AudiosState extends StateNotifier<List<AudioData>> {
   bool isActive(int index){
     return state[index].active;
   }
-
-  ProcessingState? get processingState => nowActive != null ? state[nowActive!].audio.processingState : null;
 
   void toggle(int id){
     if (nowActive == id){
@@ -136,7 +107,6 @@ class AudiosState extends StateNotifier<List<AudioData>> {
 
 class AudioData {
   AudioData({required this.audio, required this.name,required this.date,this.active=false});
-  //AudioData({required this.audio, required this.name,required this.date,required this.active});
   final AudioPlayer audio;
   final String name;
   final String date;

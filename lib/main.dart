@@ -69,6 +69,7 @@ class AudiosForm extends ConsumerWidget {
 class AudioWidget extends ConsumerWidget{
   AudioWidget({required this.index});
   int index;
+  
   @override
   Widget build(BuildContext context, WidgetRef ref){
     //final pos = ref.watch(nowPosisionProvider);
