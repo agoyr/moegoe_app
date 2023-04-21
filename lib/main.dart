@@ -89,11 +89,12 @@ class AudioWidget extends ConsumerWidget{
               //height: audioNotifier.isActive(index) ? 300.0: 0.0,
               opacity: audioNotifier.isActive(index) ? 1.0 : 0.0,
               child: AnimatedContainer(
-                height: audioNotifier.isActive(index) ? 60 : 0.0,
+                height: audioNotifier.isActive(index) ? 100 : 0.0,
                 //opacity: audioNotifier.isActive(index) ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 200),
-                child: Flexible(child: onActivePart(ref, index))//audioNotifier.isActive(index) ? onActivePart(ref, index) : const SizedBox.shrink(),
-            ),)
+                child: onActivePart(ref, index),//audioNotifier.isActive(index) ? onActivePart(ref, index) : const SizedBox.shrink(),
+              ),//)
+            )
           ]
         ),
         onTap: () => ref.read(AudiosProvider.notifier).toggle(index),
@@ -106,48 +107,49 @@ Widget onActivePart(WidgetRef ref,int index){
   final audioNotifier = ref.watch(AudiosProvider.notifier);
   return Column(
   children: [
-    Flexible(
-    child:Padding(
-      padding: const EdgeInsets.only(left: 20.0,right: 20.0),
-      child: Flexible(child:ProgressBar(
-        progress: audioNotifier.position(index),
-        buffered: audioNotifier.bufferdPosision(index),
-        total: audioNotifier.duration(index) ?? const Duration(seconds: 0)
-      ),)
-    )
+    Flexible(child: 
+      Padding(
+        padding: const EdgeInsets.only(left: 20.0,right: 20.0),
+        child: ProgressBar(
+          progress: audioNotifier.position(index),
+          buffered: audioNotifier.bufferdPosision(index),
+          total: audioNotifier.duration(index) ?? const Duration(seconds: 0)
+        ),
+      )
     ),
     Flexible(child: 
-    Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          onPressed:(){
-            
-          },
-          icon: const Flexible(child: Icon(Icons.replay_10))
-        ),
-        if(!audioNotifier.isPlaying(index))
-        IconButton(
-          onPressed: (){
-            ref.read(AudiosProvider.notifier).play(index);
-          }, 
-          icon: const Icon(Icons.play_arrow)
-        )
-        else
-        IconButton(
-          onPressed: (){
-            ref.read(AudiosProvider.notifier).pause(index);
-          }, 
-          icon: const Flexible(child: Icon(Icons.pause)) 
-        )
-        ,
-        IconButton(
-          onPressed: (){
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed:(){
+              
+            },
+            icon: const FittedBox(child: Icon(Icons.replay_10))
+          ),
+          if(!audioNotifier.isPlaying(index))
+          IconButton(
+            onPressed: (){
+              ref.read(AudiosProvider.notifier).play(index);
+            }, 
+            icon: const FittedBox(child: Icon(Icons.play_arrow))
+          )
+          else
+          IconButton(
+            onPressed: (){
+              ref.read(AudiosProvider.notifier).pause(index);
+            }, 
+            icon: const Icon(Icons.pause)
+          )
+          ,
+          IconButton(
+            onPressed: (){
 
-          }, 
-          icon: const Flexible(child:Icon(Icons.forward_10))
-        ),
-      ],
-    )),
+            }, 
+            icon: const FittedBox(child: Icon(Icons.forward_10))
+          ),
+        ],
+      )
+    ),
   ],
 );}

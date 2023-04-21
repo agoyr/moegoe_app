@@ -93,6 +93,7 @@ class AudiosState extends StateNotifier<List<AudioData>> {
       _playerStateSub = state[id].audio.playerStateStream.listen((state) {
         //print(state);
         if(state.processingState == ProcessingState.completed){
+          //print(state);
           pause(id);
         }
        });
