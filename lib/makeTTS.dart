@@ -14,7 +14,6 @@ import 'package:intl/intl.dart';
 class MyCustomSource extends StreamAudioSource {
   final List<int> bytes;
   MyCustomSource(this.bytes) : super(null);
-  
   @override
   Future<StreamAudioResponse> request([int? start, int? end]) async {
     start ??= 0;
@@ -31,12 +30,11 @@ class MyCustomSource extends StreamAudioSource {
 
 class TTSForm extends ConsumerWidget {
   Future<void> _handleHttp(WidgetRef ref) async {
-    
     var url = Uri.http('localhost:8080', 'tts', {'text': ttsText});
     var response = await http.get(url);
     AudioPlayer _player = AudioPlayer();
     _player.setAudioSource(MyCustomSource(response.bodyBytes));
-    AudioData _audioData = AudioData(audio: _player, name: ttsText, date: DateFormat('yyyy-MM-dd').format(DateTime.now()));
+    AudioData _audioData = AudioData(audio: _player, name: ttsText, date: DateFormat('yyyy-MM-dd').format(DateTime.now()),bytes:response.bodyBytes);
     ref.read(AudiosProvider.notifier).addAudio(_audioData);
     // print(ref.read(AudiosProvider).length);
     // print('ログ');

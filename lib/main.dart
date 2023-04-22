@@ -13,7 +13,7 @@ import 'dart:developer';
 import 'makeTTS.dart';
 import 'audiostate.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
-
+import 'package:sqflite/sqflite.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -105,6 +105,7 @@ class AudioWidget extends ConsumerWidget{
 
 Widget onActivePart(WidgetRef ref,int index){
   final audioNotifier = ref.watch(AudiosProvider.notifier);
+  final data = ref.read(AudiosProvider)[index];
   return Column(
   children: [
     Flexible(child: 
@@ -118,38 +119,51 @@ Widget onActivePart(WidgetRef ref,int index){
       )
     ),
     Flexible(child: 
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed:(){
-              
-            },
-            icon: const FittedBox(child: Icon(Icons.replay_10))
-          ),
-          if(!audioNotifier.isPlaying(index))
-          IconButton(
-            onPressed: (){
-              ref.read(AudiosProvider.notifier).play(index);
-            }, 
-            icon: const FittedBox(child: Icon(Icons.play_arrow))
-          )
-          else
-          IconButton(
-            onPressed: (){
-              ref.read(AudiosProvider.notifier).pause(index);
-            }, 
-            icon: const Icon(Icons.pause)
-          )
-          ,
-          IconButton(
-            onPressed: (){
+      Stack(children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              onPressed:(){
+                
+              },
+              icon: const FittedBox(child: Icon(Icons.replay_10))
+            ),
+            if(!audioNotifier.isPlaying(index))
+            IconButton(
+              onPressed: (){
+                ref.read(AudiosProvider.notifier).play(index);
+              }, 
+              icon: const FittedBox(child: Icon(Icons.play_arrow))
+            )
+            else
+            IconButton(
+              onPressed: (){
+                ref.read(AudiosProvider.notifier).pause(index);
+              }, 
+              icon: const Icon(Icons.pause)
+            )
+            ,
+            IconButton(
+              onPressed: (){
 
-            }, 
-            icon: const FittedBox(child: Icon(Icons.forward_10))
-          ),
-        ],
-      )
+              }, 
+              icon: const FittedBox(child: Icon(Icons.forward_10))
+            ),
+          ],
+        ),
+        Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: const Icon(Icons.file_download),
+                onPressed: ()async{
+                  await FileSaver.instance.saveFile(name:'${data.name}.mp3',bytes:data.bytes,ext:'mp3');
+                  print('finished');
+                },
+              ),
+            )
+      ],)
+      
     ),
   ],
 );}

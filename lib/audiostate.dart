@@ -10,6 +10,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:developer';
 import 'package:intl/intl.dart';
+import 'dart:typed_data';
 
 final AudiosProvider = StateNotifierProvider<AudiosState, List<AudioData>>((ref) => AudiosState());
 
@@ -107,18 +108,20 @@ class AudiosState extends StateNotifier<List<AudioData>> {
 }
 
 class AudioData {
-  AudioData({required this.audio, required this.name,required this.date,this.active=false});
+  AudioData({required this.audio, required this.name,required this.date,this.active=false,required this.bytes});
   final AudioPlayer audio;
   final String name;
   final String date;
   final bool active;
+  final Uint8List bytes;
 
   AudioData copyWith({AudioPlayer? audio,String? name, String? date, bool? active}){
     return AudioData(
       audio: audio ?? this.audio,
       name: name ?? this.name, 
       date: date ?? this.date,
-      active: active ?? this.active
+      active: active ?? this.active,
+      bytes: bytes
     );
   }
 }
