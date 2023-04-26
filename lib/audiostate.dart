@@ -124,8 +124,12 @@ class AudioData {
       bytes: bytes
     );
   }
+  Map<String,Object> toMap(){
+    return {
+      'TTStext':name,
+      'date':date,
+      'bytes':bytes,
+    };
+  }
+  
 }
-
-// enum AudioState{
-
-// }
